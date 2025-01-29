@@ -138,3 +138,5 @@ export class DjiDataExtractor {
         return 0
     }
 }
+
+export { DjiDataExtractor as djiDataExtractor }

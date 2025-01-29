@@ -3,6 +3,18 @@
         <li  v-if="file==null && !sampleLoaded" >
             <a @click="onLoadSample('sample')" class="section"><i class="fas fa-play"></i>  Open Sample </a>
         </li>
+        <DateSelector @dates-changed="handleDateChange"/>
+        <div v-if="availableFiles.length > 0" class="available-files">
+            <a class="centered-section">Available Files</a>
+            <ul class="files-list">
+                <li v-for="file in availableFiles"
+                 :key="file.name" @click="onLoadSample(file.url)" class="file-item">
+                    <i class="fa fa-file"></i>
+                    <span class="file-name">{{ file.name }}</span>
+                    <span class="file-size">{{ file.size }}</span>
+                </li>
+            </ul>
+        </div>
         <li v-if="url">
             <a @click="share" class="section"><i class="fas fa-share-alt"></i> {{ shared ? 'Copied to clipboard!' :
                 'Share link'}}</a>
@@ -31,6 +43,8 @@
 import VProgress from './SideBarFileManagerProgressBar.vue'
 import Worker from '../tools/parsers/parser.worker.js'
 import { store } from './Globals'
+import DateSelector from '@/components/widgets/DateSelector.vue'
+import { fileService } from '@/libs/fileService'
 
 import { MAVLink20Processor as MAVLink } from '../libs/mavlink'
 
@@ -52,7 +66,8 @@ export default {
             transferMessage: '',
             state: store,
             file: null,
-            uploadStarted: false
+            uploadStarted: false,
+            availableFiles: []
         }
     },
     created () {
@@ -215,6 +230,22 @@ export default {
             a.click()
             document.body.removeChild(a)
             window.URL.revokeObjectURL(url)
+        },
+        async handleDateChange (dateRange) {
+            try {
+                this.availableFiles = await fileService.fetchAvailableFiles(dateRange.startDate, dateRange.endDate)
+            } catch (error) {
+                console.error('Error fetching available files:', error)
+            }
+        },
+        async loadFile (file) {
+            try {
+                const blob = await fileService.downloadFile(file.url)
+                const fileObj = new File([blob], file.name)
+                this.$eventHub.$emit('file-selected', fileObj)
+            } catch (error) {
+                console.error('Error loading file:', error)
+            }
         }
     },
     mounted () {
@@ -255,7 +286,8 @@ export default {
         }
     },
     components: {
-        VProgress
+        VProgress,
+        DateSelector
     }
 }
 </script>
